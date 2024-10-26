@@ -1,0 +1,45 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=mysql+pymysql://flaskuser:password@db/weather_db
+      - OPENWEATHER_API_KEY=0198cd08d3848ac86de381ed8c9153ba
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - APP_CONFIG_FILE=/app/.env
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./app/.env:/app/.env
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: weather_db
+      MYSQL_USER: flaskuser
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  celery:
+    build: .
+    command: celery -A app.celery worker --loglevel=info
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./app/.env:/app/.env
+
+volumes:
+  db_data:
